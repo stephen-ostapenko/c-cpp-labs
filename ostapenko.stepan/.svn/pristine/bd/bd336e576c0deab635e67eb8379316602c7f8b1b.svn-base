@@ -1,0 +1,86 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
+
+#include "hufftree.h"
+#include <cstddef>
+#include <random>
+
+using std::size_t;
+using huff_tree::CharCounter;
+using huff_tree::HuffTree;
+
+TEST_CASE("test CharCounter") {
+	SUBCASE("test1") {
+		CharCounter cnt;
+		std::string res = "Hello, world!";
+
+		for (char c : res) {
+			cnt.add_char(c);
+		}
+
+		CHECK(cnt.get_char_cnt('H') == 1);
+		CHECK(cnt.get_char_cnt('e') == 1);
+		CHECK(cnt.get_char_cnt('l') == 3);
+		CHECK(cnt.get_char_cnt('o') == 2);
+		CHECK(cnt.get_char_cnt(',') == 1);
+		CHECK(cnt.get_char_cnt(' ') == 1);
+		CHECK(cnt.get_char_cnt('w') == 1);
+		CHECK(cnt.get_char_cnt('r') == 1);
+		CHECK(cnt.get_char_cnt('d') == 1);
+		CHECK(cnt.get_char_cnt('!') == 1);
+	}
+
+	SUBCASE("test2") {
+		CharCounter cnt;
+		std::string res = "Huffman algo";
+
+		for (char c : res) {
+			cnt.add_char(c);
+		}
+
+		CHECK(cnt.get_char_cnt('H') == 1);
+		CHECK(cnt.get_char_cnt('u') == 1);
+		CHECK(cnt.get_char_cnt('f') == 2);
+		CHECK(cnt.get_char_cnt('m') == 1);
+		CHECK(cnt.get_char_cnt('a') == 2);
+		CHECK(cnt.get_char_cnt('n') == 1);
+		CHECK(cnt.get_char_cnt(' ') == 1);
+		CHECK(cnt.get_char_cnt('l') == 1);
+		CHECK(cnt.get_char_cnt('g') == 1);
+		CHECK(cnt.get_char_cnt('o') == 1);
+	}
+
+	SUBCASE("test3") {
+		CharCounter cnt;
+		std::string res = "!@#$%^&*";
+
+		for (char c : res) {
+			cnt.add_char(c);
+		}
+
+		CHECK(cnt.get_char_cnt('!') == 1);
+		CHECK(cnt.get_char_cnt('@') == 1);
+		CHECK(cnt.get_char_cnt('#') == 1);
+		CHECK(cnt.get_char_cnt('$') == 1);
+		CHECK(cnt.get_char_cnt('%') == 1);
+		CHECK(cnt.get_char_cnt('^') == 1);
+		CHECK(cnt.get_char_cnt('&') == 1);
+		CHECK(cnt.get_char_cnt('*') == 1);
+	}
+
+	SUBCASE("test4") {
+		CharCounter cnt;
+		size_t act[256]{};
+		const size_t N = 10000;
+		std::mt19937 mtw(0);
+
+		for (size_t i = 0; i < N; i++) {
+			char c = mtw();
+			act[(unsigned char)c]++; cnt.add_char(c);
+		}
+
+		for (size_t i = 0; i < 256; i++) {
+			CHECK(act[i] == cnt.get_char_cnt(i));
+		}
+	}
+}

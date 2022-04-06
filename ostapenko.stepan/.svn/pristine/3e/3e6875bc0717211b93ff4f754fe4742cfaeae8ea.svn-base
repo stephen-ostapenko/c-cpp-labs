@@ -1,0 +1,17 @@
+#ifndef _STEGO_H_
+#define _STEGO_H_
+
+#include "bmp.h"
+
+typedef unsigned char byte;
+
+typedef struct key_s {
+	int x, y;
+	char c;
+} key;
+
+void insert_msg(bmp *to, bmp *from, FILE *msg_in, FILE *key_in);
+
+void extract_msg(bmp *p, FILE *key_in, FILE *msg_out);
+
+#endif

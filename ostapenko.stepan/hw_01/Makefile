@@ -1,0 +1,20 @@
+CFLAGS:=-I include/ -Wall -Wextra -pedantic -std=c99
+
+hw_01: obj/bmp.o obj/stego.o obj/main.o | obj
+	gcc -g $(CFLAGS) obj/bmp.o obj/stego.o obj/main.o -o hw_01
+
+obj/main.o: include/bmp.h include/stego.h src/main.c | obj
+	gcc -c -g $(CFLAGS) src/main.c -o obj/main.o
+
+obj/bmp.o: include/bmp.h src/bmp.c | obj
+	gcc -c -g $(CFLAGS) src/bmp.c -o obj/bmp.o
+
+obj/stego.o: include/bmp.h include/stego.h src/stego.c | obj
+	gcc -c -g $(CFLAGS) src/stego.c -o obj/stego.o
+
+obj:
+	mkdir obj
+
+.PHONY: clean
+clean: | obj
+	rm -r obj hw_01

@@ -1,0 +1,27 @@
+#include "huffman.h"
+
+using namespace std;
+
+int main(int argc, char** argv) {
+	(void)argc; (void)argv;
+
+	bool op = 1;
+
+	if (!op) {
+		ifstream cin("v.mp4");
+		ofstream cout("sos.txt");
+
+		huffman::HuffmanArchiver a;
+		a.archive(cin, cout);
+	}
+
+	if (op) {
+		ifstream cin("sos.txt");
+		ofstream cout("ans3.mp4");
+
+		huffman::HuffmanDearchiver d;
+		d.dearchive(cin, cout);
+	}
+
+	return 0;
+}

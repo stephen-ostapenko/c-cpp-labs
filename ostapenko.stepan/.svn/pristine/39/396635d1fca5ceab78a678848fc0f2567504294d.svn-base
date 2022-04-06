@@ -1,0 +1,77 @@
+#!/bin/bash
+
+PATH_TO_BIN=../../b/hw_02
+T=10
+sz=512
+
+echo Valgrind integration testing started:
+f=0
+touch xx
+for ((i = 0; i < $T; i++))
+do
+	rm xx
+	touch xx
+	shred -s $sz -n 1 xx
+
+	valgrind --quiet --leak-check=full --show-leak-kinds=all $PATH_TO_BIN -c -f xx -o yy > v_compress_output
+	if [ $? -ne 0 ]
+	then
+		f=$((f + 1))
+		echo $((i + 1)) failed!!!
+		continue
+	fi
+
+	valgrind --quiet --leak-check=full --show-leak-kinds=all $PATH_TO_BIN -u -f yy -o zz > v_decompress_output
+	if [ $? -ne 0 ]
+	then
+		f=$((f + 1))
+		echo $((i + 1)) failed!!!
+		continue
+	fi
+
+	diff <(sed -n '1p' < v_compress_output) <(sed -n '2p' < v_decompress_output)
+	if [ $? -ne 0 ]
+	then
+		f=$((f + 1))
+		echo $((i + 1)) failed!!!
+		continue
+	fi
+
+	diff <(sed -n '2p' < v_compress_output) <(sed -n '1p' < v_decompress_output)
+	if [ $? -ne 0 ]
+	then
+		f=$((f + 1))
+		echo $((i + 1)) failed!!!
+		continue
+	fi
+
+	diff <(sed -n '3p' < v_compress_output) <(sed -n '3p' < v_decompress_output)
+	if [ $? -ne 0 ]
+	then
+		f=$((f + 1))
+		echo $((i + 1)) failed!!!
+		continue
+	fi
+
+	diff xx zz
+	if [ $? -ne 0 ]
+	then
+		f=$((f + 1))
+		echo $((i + 1)) failed!!!
+		continue
+	fi
+
+	echo $((i + 1)) done
+done
+
+rm xx yy zz
+rm v_compress_output v_decompress_output
+
+if [ $f -eq 0 ]
+then
+	echo all tests done!
+else
+	echo $f errors!!!
+fi
+
+echo

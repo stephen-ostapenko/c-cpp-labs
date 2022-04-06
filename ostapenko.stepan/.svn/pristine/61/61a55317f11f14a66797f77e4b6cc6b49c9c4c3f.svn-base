@@ -1,0 +1,114 @@
+#include <assert.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "bmp.h"
+#include "stego.h"
+
+static const int CHAR_SIZE = 5;
+
+static byte get_bit(byte x) {
+	return x & 1;
+}
+
+static void set_bit(byte *x, byte b) {
+	*x = (*x | (byte)1) ^ ((byte)1 ^ b);
+}
+
+static byte get_number_by_char(char c) {
+	if ('A' <= c && c <= 'Z') {
+		return c - 'A';
+	} else if (c == ' ') {
+		return 26;
+	} else if (c == '.') {
+		return 27;
+	} else if (c == ',') {
+		return 28;
+	}
+	assert(0);
+}
+
+static char get_char_by_number(byte x) {
+	if (x < 26) {
+		return 'A' + x;
+	} else if (x == 26) {
+		return ' ';
+	} else if (x == 27) {
+		return '.';
+	} else if (x == 28) {
+		return ',';
+	}
+	assert(0);
+}
+
+static int read_next_key(FILE *file, key *k) {
+	for (int i = 0; i < CHAR_SIZE; i++) {
+		if (fscanf(file, "%d %d %c", &k[i].x, &k[i].y, &k[i].c) == EOF) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+static void insert_next_char(bmp *p, char c, key *k) {
+	byte code = get_number_by_char(c);
+
+	for (int i = 0; i < CHAR_SIZE; i++, code >>= 1) {
+		if (k[i].c == 'R') {
+			set_bit(&p->picture[k[i].y][k[i].x].r, get_bit(code));
+		} else if (k[i].c == 'G') {
+			set_bit(&p->picture[k[i].y][k[i].x].g, get_bit(code));
+		} else if (k[i].c == 'B') {
+			set_bit(&p->picture[k[i].y][k[i].x].b, get_bit(code));
+		}
+	}
+}
+
+void insert_msg(bmp *to, bmp *from, FILE *msg_in, FILE *key_in) {
+	int width = from->info.width, height = from->info.height;
+	to->picture = alloc_picture(width, height);
+	memcpy(&to->header, &from->header, sizeof(file_header));
+	memcpy(&to->info, &from->info, sizeof(info_header));
+	for (int i = 0; i < height; i++) {
+		memcpy(to->picture[i], from->picture[i], width * sizeof(pixel));
+	}
+	
+	char c;
+	key *k = malloc(CHAR_SIZE * sizeof(key));
+
+	while (fscanf(msg_in, "%c", &c) != EOF && (!isspace(c) || c == ' ')) {
+		read_next_key(key_in, k);
+		insert_next_char(to, c, k);
+	}
+
+	free(k);
+}
+
+static char extract_next_char(bmp *p, key *k) {
+	byte result = 0;
+
+	for (int i = CHAR_SIZE - 1; i >= 0; i--) {
+		result <<= 1;
+
+		if (k[i].c == 'R') {
+			set_bit(&result, get_bit(p->picture[k[i].y][k[i].x].r));
+		} else if (k[i].c == 'G') {
+			set_bit(&result, get_bit(p->picture[k[i].y][k[i].x].g));
+		} else if (k[i].c == 'B') {
+			set_bit(&result, get_bit(p->picture[k[i].y][k[i].x].b));
+		}
+	}
+
+	return get_char_by_number(result);
+}
+
+void extract_msg(bmp *p, FILE *key_in, FILE *msg_out) {
+	key *k = malloc(CHAR_SIZE * sizeof(key));
+
+	while (read_next_key(key_in, k)) {
+		fprintf(msg_out, "%c", extract_next_char(p, k));
+	}
+
+	free(k);
+}

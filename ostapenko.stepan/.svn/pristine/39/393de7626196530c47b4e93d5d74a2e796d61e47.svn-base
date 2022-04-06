@@ -1,0 +1,8 @@
+CFLAGS:=-I include/ -Wall -Wextra -pedantic
+
+hw_01: src/main.c
+	gcc -g $(CFLAGS) src/main.c -o hw_01
+
+.PHONY: clean
+clean:
+	rm hw_01

@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.10)
+project(hw_02 CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wextra -pedantic")
+
+include_directories(include/)
+
+add_executable(hw_02 src/main.cpp include/bitio.h src/bitio.cpp include/hufftree.h src/hufftree.cpp include/huffman_archiver.h src/huffman_archiver.cpp include/huffman_dearchiver.h src/huffman_dearchiver.cpp include/huffman.h)
+
+add_executable(test_hw_02 test_src/autotest.cpp include/bitio.h src/bitio.cpp include/hufftree.h src/hufftree.cpp include/huffman_archiver.h src/huffman_archiver.cpp include/huffman_dearchiver.h src/huffman_dearchiver.cpp include/huffman.h include/doctest.h)

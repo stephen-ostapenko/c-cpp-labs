@@ -1,0 +1,414 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
+
+#include "hufftree.h"
+#include <cstddef>
+#include <random>
+#include <vector>
+#include <algorithm>
+#include <functional>
+
+using std::size_t;
+using std::mt19937;
+using std::vector;
+using huff_tree::CharCounter;
+using huff_tree::HuffTree;
+
+const size_t BITS_IN_CHAR = sizeof(char) * 8;
+
+TEST_SUITE("test CharCounter") {
+	TEST_CASE("test 1") {
+		CharCounter cnt;
+		std::string res = "Hello, world!";
+
+		for (char c : res) {
+			cnt.add_char(c);
+		}
+
+		CHECK(cnt.get_char_cnt('H') == 1);
+		CHECK(cnt.get_char_cnt('e') == 1);
+		CHECK(cnt.get_char_cnt('l') == 3);
+		CHECK(cnt.get_char_cnt('o') == 2);
+		CHECK(cnt.get_char_cnt(',') == 1);
+		CHECK(cnt.get_char_cnt(' ') == 1);
+		CHECK(cnt.get_char_cnt('w') == 1);
+		CHECK(cnt.get_char_cnt('r') == 1);
+		CHECK(cnt.get_char_cnt('d') == 1);
+		CHECK(cnt.get_char_cnt('!') == 1);
+	}
+
+	TEST_CASE("test 2") {
+		CharCounter cnt;
+		std::string res = "Huffman algo";
+
+		for (char c : res) {
+			cnt.add_char(c);
+		}
+
+		CHECK(cnt.get_char_cnt('H') == 1);
+		CHECK(cnt.get_char_cnt('u') == 1);
+		CHECK(cnt.get_char_cnt('f') == 2);
+		CHECK(cnt.get_char_cnt('m') == 1);
+		CHECK(cnt.get_char_cnt('a') == 2);
+		CHECK(cnt.get_char_cnt('n') == 1);
+		CHECK(cnt.get_char_cnt(' ') == 1);
+		CHECK(cnt.get_char_cnt('l') == 1);
+		CHECK(cnt.get_char_cnt('g') == 1);
+		CHECK(cnt.get_char_cnt('o') == 1);
+	}
+
+	TEST_CASE("test 3") {
+		CharCounter cnt;
+		std::string res = "!@#$%^&*";
+
+		for (char c : res) {
+			cnt.add_char(c);
+		}
+
+		CHECK(cnt.get_char_cnt('!') == 1);
+		CHECK(cnt.get_char_cnt('@') == 1);
+		CHECK(cnt.get_char_cnt('#') == 1);
+		CHECK(cnt.get_char_cnt('$') == 1);
+		CHECK(cnt.get_char_cnt('%') == 1);
+		CHECK(cnt.get_char_cnt('^') == 1);
+		CHECK(cnt.get_char_cnt('&') == 1);
+		CHECK(cnt.get_char_cnt('*') == 1);
+	}
+
+	TEST_CASE("test 4") {
+		CharCounter cnt;
+		size_t act[256]{};
+		const size_t N = 10000;
+		mt19937 mtw(0);
+
+		for (size_t i = 0; i < N; i++) {
+			char c = mtw();
+			act[(unsigned char)c]++; cnt.add_char(c);
+		}
+
+		for (size_t i = 0; i < (1 << BITS_IN_CHAR); i++) {
+			CHECK(act[i] == cnt.get_char_cnt(i));
+		}
+	}
+
+	TEST_CASE("test 5") {
+		CharCounter cnt;
+		for (size_t i = 0; i < (1 << BITS_IN_CHAR); i++) {
+			CHECK(cnt.get_char_cnt(i) == 0);
+		}
+	}
+}
+
+TEST_SUITE("test HuffTree") {
+	const size_t TREE_SZ = ((1 << BITS_IN_CHAR) * 2 - 1);
+
+	void load_chars(CharCounter &cnt, mt19937 &mtw, size_t mod = 256, size_t N = 10000) {
+		for (size_t i = 0; i < N; i++) {
+			char c = mtw() % mod;
+			cnt.add_char(c);
+		}
+	}
+
+	size_t get_full_length(const CharCounter &cnt, const HuffTree &t) {
+		size_t sz = 0;
+		for (size_t i = 0; i < (1 << BITS_IN_CHAR); i++) {
+			sz += cnt.get_char_cnt(i) * t.get_char_code(i).size();
+		}
+		return sz;
+	}
+
+	vector <unsigned char> get_char_permutation(mt19937 &mtw) {
+		vector <unsigned char> p(1 << BITS_IN_CHAR);
+		std::iota(p.begin(), p.end(), 0); std::shuffle(p.begin(), p.end(), mtw);
+		return p;
+	}
+
+	vector <bool> get_bit_char_seq(vector <unsigned char> &s) {
+		vector <bool> result;
+		for (auto c : s) {
+			for (size_t i = 0; i < BITS_IN_CHAR; i++) {
+				result.push_back(c & (1ll << i));
+			}
+		}
+		return result;
+	}
+
+	vector <bool> get_random_tree(mt19937 &mtw) {
+		vector <int> gr[TREE_SZ], cur_v(1 << BITS_IN_CHAR);
+		std::iota(cur_v.begin(), cur_v.end(), 0);
+		size_t p = 1 << BITS_IN_CHAR;
+
+		while (cur_v.size() > 1) {
+			int a = mtw() % (cur_v.size() - 1) + 1;
+			int b = mtw() % a;
+			
+			gr[p] = {cur_v[a], cur_v[b]};
+			cur_v.erase(cur_v.begin() + a);
+			cur_v.erase(cur_v.begin() + b);
+			cur_v.push_back(p++);
+		}
+
+		vector <bool> result;
+		std::function<void(int)> dfs = [&](int v) -> void {
+			for (int u : gr[v]) {
+				result.push_back(0);
+				dfs(u);
+				result.push_back(1);
+			}
+		};
+		dfs(cur_v[0]);
+
+		return result;
+	}
+
+	TEST_CASE("test rebuild 1") {
+		HuffTree t;
+		CharCounter cnt;
+		mt19937 mtw(1);
+
+		load_chars(cnt, mtw);
+		t.rebuild(cnt);
+
+		CHECK(get_full_length(cnt, t) == 79974);
+	}
+
+	TEST_CASE("test rebuild 2") {
+		HuffTree t;
+		CharCounter cnt;
+		mt19937 mtw(2);
+
+		load_chars(cnt, mtw);
+		t.rebuild(cnt);
+
+		CHECK(get_full_length(cnt, t) == 79991);
+	}
+
+	TEST_CASE("test rebuild 3") {
+		HuffTree t;
+		CharCounter cnt;
+		mt19937 mtw(3);
+		
+		load_chars(cnt, mtw, 2);
+		t.rebuild(cnt);
+
+		CHECK(get_full_length(cnt, t) == 14968);
+	}
+
+	TEST_CASE("test rebuild 4") {
+		HuffTree t;
+		CharCounter cnt;
+		mt19937 mtw(4);
+		
+		load_chars(cnt, mtw, 5);
+		t.rebuild(cnt);
+
+		CHECK(get_full_length(cnt, t) == 25952);
+	}
+
+	TEST_CASE("test rebuild 5") {
+		HuffTree t;
+		CharCounter cnt;
+		mt19937 mtw(5);
+		
+		load_chars(cnt, mtw, 1);
+		t.rebuild(cnt);
+
+		CHECK(get_full_length(cnt, t) == 10000);
+	}
+
+	TEST_CASE("test multiple rebuilds") {
+		HuffTree t;
+		CharCounter cnt;
+		mt19937 mtw(24);
+
+		load_chars(cnt, mtw);
+
+		t.rebuild(cnt);
+		CHECK(get_full_length(cnt, t) == 79988);
+
+		t.rebuild(cnt);
+		CHECK(get_full_length(cnt, t) == 79988);
+
+		t.rebuild(cnt);
+		CHECK(get_full_length(cnt, t) == 79988);
+
+		t.rebuild(cnt);
+		CHECK(get_full_length(cnt, t) == 79988);
+
+		t.rebuild(cnt);
+		CHECK(get_full_length(cnt, t) == 79988);
+
+		t.rebuild(cnt);
+		CHECK(get_full_length(cnt, t) == 79988);
+
+		t.rebuild(cnt);
+		CHECK(get_full_length(cnt, t) == 79988);
+
+		t.rebuild(cnt);
+		CHECK(get_full_length(cnt, t) == 79988);
+
+		t.rebuild(cnt);
+		CHECK(get_full_length(cnt, t) == 79988);
+
+		t.rebuild(cnt);
+		CHECK(get_full_length(cnt, t) == 79988);
+
+		t.rebuild(cnt);
+		CHECK(get_full_length(cnt, t) == 79988);
+	}
+
+	TEST_CASE("test tree length") {
+		HuffTree t;
+		CharCounter cnt;
+		mt19937 mtw(22);
+
+		load_chars(cnt, mtw);
+
+		t.rebuild(cnt);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(cnt);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(cnt);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(cnt);
+		CHECK(t.get_compressed_tree().size() == 3068);
+	}
+
+	TEST_CASE("test rebuild from file 1") {
+		HuffTree t;
+		mt19937 mtw(28);
+
+		vector <unsigned char> p = get_char_permutation(mtw);
+		vector <bool> tree = get_random_tree(mtw);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+	}
+
+	TEST_CASE("test rebuild from file 2") {
+		HuffTree t;
+		mt19937 mtw(11);
+
+		vector <unsigned char> p = get_char_permutation(mtw);
+		vector <bool> tree = get_random_tree(mtw);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+	}
+
+	TEST_CASE("test rebuild from file 3") {
+		HuffTree t;
+		mt19937 mtw(19);
+
+		vector <unsigned char> p = get_char_permutation(mtw);
+		vector <bool> tree = get_random_tree(mtw);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+
+		t.rebuild(p, tree);
+		CHECK(t.get_compressed_tree().size() == 3068);
+	}
+
+	TEST_CASE("test rebuild from file with get_compressed_tree 1") {
+		HuffTree t;
+		mt19937 mtw(24);
+
+		vector <unsigned char> p = get_char_permutation(mtw);
+		vector <bool> tree = get_random_tree(mtw);
+
+		t.rebuild(p, tree);
+
+		vector <bool> compressed = get_bit_char_seq(p);
+		std::copy(tree.begin(), tree.end(), std::back_inserter(compressed));
+
+		CHECK(compressed == t.get_compressed_tree());
+	}
+
+	TEST_CASE("test rebuild from file with get_compressed_tree 2") {
+		HuffTree t;
+		mt19937 mtw(22);
+
+		vector <unsigned char> p = get_char_permutation(mtw);
+		vector <bool> tree = get_random_tree(mtw);
+
+		t.rebuild(p, tree);
+
+		vector <bool> compressed = get_bit_char_seq(p);
+		std::copy(tree.begin(), tree.end(), std::back_inserter(compressed));
+
+		CHECK(compressed == t.get_compressed_tree());
+	}
+
+	TEST_CASE("test rebuild from file with get_compressed_tree 3") {
+		HuffTree t;
+		mt19937 mtw(28);
+
+		vector <unsigned char> p = get_char_permutation(mtw);
+		vector <bool> tree = get_random_tree(mtw);
+
+		t.rebuild(p, tree);
+
+		vector <bool> compressed = get_bit_char_seq(p);
+		std::copy(tree.begin(), tree.end(), std::back_inserter(compressed));
+
+		CHECK(compressed == t.get_compressed_tree());
+	}
+
+	TEST_CASE("test rebuild from file with get_compressed_tree 4") {
+		HuffTree t;
+		mt19937 mtw(11);
+
+		vector <unsigned char> p = get_char_permutation(mtw);
+		vector <bool> tree = get_random_tree(mtw);
+
+		t.rebuild(p, tree);
+
+		vector <bool> compressed = get_bit_char_seq(p);
+		std::copy(tree.begin(), tree.end(), std::back_inserter(compressed));
+
+		CHECK(compressed == t.get_compressed_tree());
+	}
+
+	TEST_CASE("test rebuild from file with get_compressed_tree 5") {
+		HuffTree t;
+		mt19937 mtw(19);
+
+		vector <unsigned char> p = get_char_permutation(mtw);
+		vector <bool> tree = get_random_tree(mtw);
+
+		t.rebuild(p, tree);
+
+		vector <bool> compressed = get_bit_char_seq(p);
+		std::copy(tree.begin(), tree.end(), std::back_inserter(compressed));
+
+		CHECK(compressed == t.get_compressed_tree());
+	}
+}

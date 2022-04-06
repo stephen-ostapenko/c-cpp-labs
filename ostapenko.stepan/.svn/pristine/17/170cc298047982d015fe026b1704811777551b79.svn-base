@@ -1,0 +1,113 @@
+#include <assert.h>
+#include <stdbool.h>
+#include "test_str.h"
+#include "str.h"
+
+bool compare(char *a, char *b, int n) {
+	for (int i = 0; i < n; i++) {
+		if (a[i] != b[i]) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+void test_strcpy() {
+	{
+		char s1[100] = "kek";
+		char s2[100];
+		char *answer = my_strcpy(s2, s1);
+		assert(compare(s1, answer, 3));
+	}
+	{
+		char s1[100] = "";
+		char s2[100];
+		char *answer = my_strcpy(s2, s1);
+		assert(compare(s1, answer, 0));
+	}
+	{
+		char s1[100] = "djfadljflafklafkaskakflf";
+		char s2[100];
+		char *answer = my_strcpy(s2, s1);
+		assert(compare(s1, answer, 24));
+	}
+}
+
+void test_strcat() {
+	{
+		char s1[100] = "kek";
+		char s2[100] = "lol";
+		char *answer = my_strcat(s1, s2);
+		char expected[100] = "keklol";
+		assert(compare(answer, expected, 6));
+	}
+	{
+		char s1[100] = "kek";
+		char s2[100] = "";
+		char *answer = my_strcat(s1, s2);
+		char expected[100] = "kek";
+		assert(compare(answer, expected, 3));
+	}
+	{
+		char s1[100] = "";
+		char s2[100] = "lol";
+		char *answer = my_strcat(s1, s2);
+		char expected[100] = "lol";
+		assert(compare(answer, expected, 3));
+	}
+	{
+		char s1[100] = "sldkdfklakaflk";
+		char s2[100] = "ldjasfaoiasooiasfiooasf";
+		char *answer = my_strcat(s1, s2);
+		char expected[100] = "sldkdfklakaflkldjasfaoiasooiasfiooasf";
+		assert(compare(answer, expected, 37));
+	}
+}
+
+void test_strcmp() {
+	{
+		char s1[] = "aaaaaaaab";
+		char s2[] = "aaaaaaaaa";
+		assert(my_strcmp(s1, s2) > 0);
+	}
+	{
+		char s1[] = "aaaaaaaaa";
+		char s2[] = "aaaaaaaab";
+		assert(my_strcmp(s1, s2) < 0);
+	}
+	{
+		char s1[] = "aaaaaaaa";
+		char s2[] = "aaaaaaaaa";
+		assert(my_strcmp(s1, s2) < 0);
+	}
+	{
+		char s1[] = "aaaaaaaa";
+		char s2[] = "aaaaaaa";
+		assert(my_strcmp(s1, s2) > 0);
+	}
+	{
+		char s1[] = "aaaaaaaa";
+		char s2[] = "aaaaaaaa";
+		assert(my_strcmp(s1, s2) == 0);
+	}
+	{
+		char s1[] = "";
+		char s2[] = "";
+		assert(my_strcmp(s1, s2) == 0);
+	}
+}
+
+void test_strlen() {
+	{
+		char s[] = "kek";
+		assert(my_strlen(s) == 3);
+	}
+	{
+		char s[] = "";
+		assert(my_strlen(s) == 0);
+	}
+	{
+		char s[] = "ldfglalakafgldfdsf";
+		assert(my_strlen(s) == 18);
+	}
+}

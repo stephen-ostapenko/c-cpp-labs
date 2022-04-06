@@ -1,0 +1,107 @@
+#ifndef LAB11_EMPLOYEES_H_INCLUDED
+#define LAB11_EMPLOYEES_H_INCLUDED
+
+#include <cstdint>
+#include <iosfwd>
+#include <vector>
+
+// ============================================================================
+
+class Employee {
+public:
+  static const int32_t DEVELOPER_TYPE = 1;
+  static const int32_t SALES_MANAGER_TYPE = 2;
+
+  Employee();
+  virtual ~Employee();
+
+  virtual int salary() const = 0;
+
+  static Employee* read_employee(std::istream &in);
+  virtual void print(std::ostream &out) const;
+
+  static Employee* read_employee_from_file(std::ifstream &in);
+  virtual void print_to_file(std::ofstream &out) const;
+
+  void set_name(std::string &name);
+
+protected:
+  char *_name;
+  int32_t _base_salary;
+};
+
+std::ostream& operator<<(std::ostream &out, const Employee &e);
+std::ofstream& operator<<(std::ofstream &out, const Employee &e);
+
+// ============================================================================
+
+class Developer : public Employee {
+public:
+  Developer();
+  ~Developer() = default;
+
+  int salary() const override;
+  
+  friend std::istream& operator>>(std::istream &in, Developer &d);
+  friend std::ifstream& operator>>(std::ifstream &in, Developer &d);
+
+  void print(std::ostream &out) const override;
+
+  void print_to_file(std::ofstream &out) const override;
+
+protected:
+  bool _has_bonus;
+};
+
+std::istream& operator>>(std::istream &in, Developer &d);
+std::ifstream& operator>>(std::ifstream &in, Developer &d);
+
+// ============================================================================
+
+class SalesManager : public Employee {
+public:
+  SalesManager();
+  ~SalesManager() = default;
+
+  int salary() const override;
+
+  friend std::istream& operator>>(std::istream &in, SalesManager &m);
+  friend std::ifstream& operator>>(std::ifstream &in, SalesManager &m);
+  
+  void print(std::ostream &out) const override;
+
+  void print_to_file(std::ofstream &out) const override;
+
+protected:
+  int32_t _sold_nm, _price;
+};
+
+std::istream& operator>>(std::istream &in, SalesManager &m);
+std::ifstream& operator>>(std::ifstream &in, SalesManager &m);
+
+// ============================================================================
+
+class EmployeesArray final {
+public:
+  EmployeesArray();
+  ~EmployeesArray();
+
+  void add(const Employee *e);
+  
+  int total_salary() const;
+
+  void read_employees_from_file(std::ifstream &in);
+
+  void print(std::ostream &out) const;
+
+  void print_to_file(std::ofstream &out) const;
+  
+private:
+  std::vector <const Employee*> _employees;
+};
+
+std::ifstream& operator>>(std::ifstream &in, EmployeesArray &arr);
+std::ostream& operator<<(std::ostream &out, const EmployeesArray &arr);
+std::ofstream& operator<<(std::ofstream &out, const EmployeesArray &arr);
+
+#endif

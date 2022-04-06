@@ -1,0 +1,46 @@
+#!/bin/bash
+
+cd ../
+mkdir b
+cd b
+if [ $? -ne 0 ]
+then
+	exit 1
+fi
+echo
+
+cmake ..
+if [ $? -ne 0 ]
+then
+	exit 1
+fi
+echo
+
+make
+if [ $? -ne 0 ]
+then
+	exit 1
+fi
+echo
+
+./test_hw_02
+if [ $? -ne 0 ]
+then
+	exit 1
+fi
+echo
+
+cd ../test/itest
+if [ $? -ne 0 ]
+then
+	exit 1
+fi
+
+./vitest.sh
+if [ $? -ne 0 ]
+then
+	exit 1
+fi
+
+./itest.sh
+

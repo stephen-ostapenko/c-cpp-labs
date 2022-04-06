@@ -1,0 +1,17 @@
+#pragma once
+
+#include <vector>
+#include <string_view>
+
+namespace arg_utils {
+
+std::vector <std::string_view> convert_args(int argc, const char **argv);
+
+void ex_assert(bool statement, const char *msg);
+void validate_args(const std::vector <std::string_view> &args);
+
+bool get_mode(const std::vector <std::string_view> &args);
+std::string_view get_input_file(const std::vector <std::string_view> &args);
+std::string_view get_output_file(const std::vector <std::string_view> &args);
+
+}

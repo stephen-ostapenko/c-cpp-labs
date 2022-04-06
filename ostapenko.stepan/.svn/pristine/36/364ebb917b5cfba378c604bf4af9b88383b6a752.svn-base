@@ -1,0 +1,52 @@
+#!/bin/bash
+
+PATH_TO_BIN=../../b/hw_02
+T=1000
+sz=5000
+
+echo Integration testing started:
+f=0
+touch x
+for ((i = 0; i < $T; i++))
+do
+	rm x
+	touch x
+	shred -s $sz -n 1 x
+
+	$PATH_TO_BIN -c -f x -o y
+	if [ $? -ne 0 ]
+	then
+		f=$((f + 1))
+		echo $((i + 1)) failed!!!
+		continue
+	fi
+
+	$PATH_TO_BIN -u -f y -o z
+	if [ $? -ne 0 ]
+	then
+		f=$((f + 1))
+		echo $((i + 1)) failed!!!
+		continue
+	fi
+
+	diff x z
+	if [ $? -ne 0 ]
+	then
+		f=$((f + 1))
+		echo $((i + 1)) failed!!!
+		continue
+	fi
+
+	echo $((i + 1)) done
+done
+
+rm x y z
+
+if [ $f -eq 0 ]
+then
+	echo all tests done!
+else
+	echo $f errors!!!
+fi
+
+echo

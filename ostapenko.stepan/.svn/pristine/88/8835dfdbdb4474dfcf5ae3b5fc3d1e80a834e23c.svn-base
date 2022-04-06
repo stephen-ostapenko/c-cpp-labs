@@ -1,0 +1,90 @@
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "bmp.h"
+#include "stego.h"
+
+int main(int argc, char **argv) {
+	assert(argc >= 2);
+
+	if (!strcmp(argv[1], "crop-rotate")) {
+		assert(argc >= 8);
+
+		FILE *in = fopen(argv[2], "rb");
+		FILE *out = fopen(argv[3], "wb");
+
+		bmp orig;
+		load_bmp(in, &orig);
+		
+		bmp cropped;
+		int x = atoi(argv[4]), y = atoi(argv[5]), w = atoi(argv[6]), h = atoi(argv[7]);
+		crop(&cropped, &orig, x, y, w, h);
+
+		bmp rotated;
+		rotate(&rotated, &cropped);
+
+		save_bmp(out, &rotated);
+
+		free_bmp(&orig);
+		free_bmp(&cropped);
+		free_bmp(&rotated);
+
+		fclose(in);
+		fclose(out);
+
+	} else if (!strcmp(argv[1], "insert")) {
+		assert(argc >= 6);
+
+		FILE *bmp_in = fopen(argv[2], "rb");
+		FILE *key_in = fopen(argv[4], "r");
+		FILE *msg_in = fopen(argv[5], "r");
+		FILE *bmp_out = fopen(argv[3], "wb");
+
+		bmp orig;
+		load_bmp(bmp_in, &orig);
+
+		fprintf(stderr, "keksos\n");
+
+		bmp result;
+		insert_msg(&result, &orig, msg_in, key_in);
+
+		fprintf(stderr, "keksos\n");
+
+		save_bmp(bmp_out, &result);
+
+		fprintf(stderr, "keksos\n");
+
+		free_bmp(&orig);
+		free_bmp(&result);
+
+		fclose(bmp_in);
+		fclose(msg_in);
+		fclose(key_in);
+		fclose(bmp_out);
+
+	} else if (!strcmp(argv[1], "extract")) {
+		assert(argc >= 5);
+
+		FILE *bmp_in = fopen(argv[2], "rb");
+		FILE *key_in = fopen(argv[3], "r");
+		FILE *msg_out = fopen(argv[4], "w");
+
+		bmp orig;
+		load_bmp(bmp_in, &orig);
+
+		extract_msg(&orig, key_in, msg_out);
+
+		free_bmp(&orig);
+
+		fclose(bmp_in);
+		fclose(key_in);
+		fclose(msg_out);
+
+	} else {
+		printf("Error! Unknown option %s\n", argv[1]);
+		return 1;
+	}
+
+	return 0;
+}

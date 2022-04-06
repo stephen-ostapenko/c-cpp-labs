@@ -1,0 +1,82 @@
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "mergesort.h"
+
+int int_lt_comparator(const void *a, const void *b) {
+	return *(int*)a - *(int*)b;
+}
+
+int char_lt_comparator(const void *a, const void *b) {
+	return *(char*)a - *(char*)b;
+}
+
+int string_lt_comparator(const void *a, const void *b) {
+	return strcmp(*(char**)a, *(char**)b);
+}
+
+void print_int_array(int *array, size_t size) {
+	for (size_t i = 0; i < size; i++) {
+		printf("%d ", array[i]);
+	}
+	printf("\n");
+}
+
+void print_char_array(char *array, size_t size) {
+	for (size_t i = 0; i < size; i++) {
+		printf("%c ", array[i]);
+	}
+	printf("\n");
+}
+
+void print_string_array(char **array, size_t size) {
+	for (size_t i = 0; i < size; i++) {
+		printf("%s ", array[i]);
+	}
+	printf("\n");
+}
+
+int main(int argc, char **argv) {
+	int elements_count = argc - 2;
+	if (!strcmp(argv[1], "int")) {
+		int *arr = malloc(elements_count * sizeof(int));
+		for (int i = 2; i < argc; i++) {
+			arr[i - 2] = atoi(argv[i]);
+		}
+
+		mergesort(arr, elements_count, sizeof(int), int_lt_comparator);
+		print_int_array(arr, elements_count);
+
+		free(arr);
+	}
+
+	if (!strcmp(argv[1], "char")) {
+		char *arr = malloc(elements_count * sizeof(char));
+		for (int i = 2; i < argc; i++) {
+			arr[i - 2] = argv[i][0];
+		}
+
+		mergesort(arr, elements_count, sizeof(char), char_lt_comparator);
+		print_char_array(arr, elements_count);
+
+		free(arr);
+	}
+
+	if (!strcmp(argv[1], "str")) {
+		char **arr = malloc(elements_count * sizeof(char*));
+		for (int i = 2; i < argc; i++) {
+			arr[i - 2] = malloc(strlen(argv[i]) * sizeof(char));
+			strcpy(arr[i - 2], argv[i]);
+		}
+
+		mergesort(arr, elements_count, sizeof(char*), string_lt_comparator);
+		print_string_array(arr, elements_count);
+
+		for (int i = 0; i < elements_count; i++) {
+			free(arr[i]);
+		}
+		free(arr);
+	}
+
+	return 0;
+}

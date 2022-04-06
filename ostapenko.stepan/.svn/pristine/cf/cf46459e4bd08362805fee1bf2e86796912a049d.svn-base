@@ -1,0 +1,58 @@
+#include "huffman_archiver.h"
+
+namespace huffman {
+
+void HuffmanArchiver::archive(std::ifstream &in, std::ofstream &out) {
+	CharCounter cnt;
+	count_chars(in, cnt);
+	htree.rebuild(cnt);
+
+	in.clear(); in.seekg(in.beg);
+	BitOutputStream bo(out);
+	save_tree(bo);
+	write_file_size(cnt, bo);
+	compress_file(in, bo);
+}
+
+void HuffmanArchiver::count_chars(std::ifstream &in, CharCounter &cnt) const {
+	char buf;
+	while (in.read(&buf, 1)) {
+		cnt.add_char(buf);
+	}
+}
+
+void HuffmanArchiver::save_tree(BitOutputStream &bo) const {
+	std::vector <bool> tree = htree.get_compressed_tree();
+	for (bool b : tree) {
+		bo.write_bit(b);
+	}
+}
+
+void HuffmanArchiver::compress_file(std::ifstream &in, BitOutputStream &bo) const {
+	char buf;
+	size_t file_sz = 0;
+	while (in.read(&buf, 1)) {
+		const std::vector <bool> &code = htree.get_char_code((unsigned char)buf);
+		file_sz++;
+		for (bool b : code) {
+			bo.write_bit(b);
+		}
+	}
+}
+
+size_t HuffmanArchiver::calc_file_size(const CharCounter &cnt) const {
+	size_t result = 0;
+	for (size_t i = 0; i < (1 << BITS_IN_CHAR); i++) {
+		result += cnt.get_char_cnt(i) * htree.get_char_code(i).size();
+	}
+	return result;
+}
+
+void HuffmanArchiver::write_file_size(const CharCounter &cnt, BitOutputStream &bo) const {
+	size_t sz = calc_file_size(cnt);
+	for (size_t i = 0; i < sizeof(sz) * 8; i++) {
+		bo.write_bit(sz & ((size_t)1 << i));
+	}
+}
+
+}

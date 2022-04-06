@@ -1,0 +1,29 @@
+#pragma once
+
+#include "bitio.h"
+#include "hufftree.h"
+#include <cstddef>
+#include <fstream>
+
+namespace huffman {
+
+using std::size_t;
+using huff_tree::HuffTree;
+using bit_io::BitInputStream;
+
+class HuffmanDearchiver {
+public:
+	void dearchive(std::ifstream &in, std::ofstream &out);
+
+private:
+	static const size_t BUFFER_SIZE = 1;
+	static const size_t BITS_IN_CHAR = 8 * sizeof(unsigned char);
+	HuffTree htree;
+
+	std::vector <unsigned char> get_char_permutation(std::ifstream &in) const;
+	std::vector <bool> get_tree_tour(BitInputStream &bi) const;
+	size_t read_file_size(BitInputStream &bi) const;
+	void decompress_file(BitInputStream &bi, size_t sz, std::ofstream &out) const;
+};
+
+}

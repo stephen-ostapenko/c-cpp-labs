@@ -1,0 +1,221 @@
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define db(e) fprintf(stderr, "%s\n", e)
+
+typedef unsigned char byte;
+typedef unsigned short word;
+typedef unsigned int dword;
+
+const dword header_size = 14;
+const dword info_size = 40;
+
+typedef struct file_header_s {
+	word type;
+	dword size;
+	word res1;
+	word res2;
+	dword offset;
+} file_header;
+
+typedef struct info_header_s {
+	dword info_size;
+	int width;
+	int height;
+	word planes;
+	word bit_count;
+	dword compression;
+	dword picture_size;
+	int x_pels;
+	int y_pels;
+	dword clr_used;
+	dword clr_important;
+} info_header;
+
+typedef struct pixel_s {
+	byte r, g, b;
+} pixel;
+
+typedef struct bmp_s {
+	file_header header;
+	info_header info;
+	pixel **picture;
+} bmp;
+
+void read_file_header(FILE *file, file_header *header) {
+	fread(&header->type, sizeof(header->type), 1, file);
+	fread(&header->size, sizeof(header->size), 1, file);
+	fread(&header->res1, sizeof(header->res1), 1, file);
+	fread(&header->res2, sizeof(header->res2), 1, file);
+	fread(&header->offset, sizeof(header->offset), 1, file);
+}
+
+void read_info_header(FILE *file, info_header *info) {
+	fread(&info->info_size, sizeof(info->info_size), 1, file);
+	fread(&info->width, sizeof(info->width), 1, file);
+	fread(&info->height, sizeof(info->height), 1, file);
+	fread(&info->planes, sizeof(info->planes), 1, file);
+	fread(&info->bit_count, sizeof(info->bit_count), 1, file);
+	fread(&info->compression, sizeof(info->compression), 1, file);
+	fread(&info->picture_size, sizeof(info->picture_size), 1, file);
+	fread(&info->x_pels, sizeof(info->x_pels), 1, file);
+	fread(&info->y_pels, sizeof(info->y_pels), 1, file);
+	fread(&info->clr_used, sizeof(info->clr_used), 1, file);
+	fread(&info->clr_important, sizeof(info->clr_important), 1, file);
+}
+
+void read_pixel(FILE *file, pixel *p) {
+	fread(&p->b, sizeof(p->b), 1, file);
+	fread(&p->g, sizeof(p->g), 1, file);
+	fread(&p->r, sizeof(p->r), 1, file);
+}
+
+void write_file_header(FILE *file, file_header *header) {
+	fwrite(&header->type, sizeof(header->type), 1, file);
+	fwrite(&header->size, sizeof(header->size), 1, file);
+	fwrite(&header->res1, sizeof(header->res1), 1, file);
+	fwrite(&header->res2, sizeof(header->res2), 1, file);
+	fwrite(&header->offset, sizeof(header->offset), 1, file);
+}
+
+void write_info_header(FILE *file, info_header *info) {
+	fwrite(&info->info_size, sizeof(info->info_size), 1, file);
+	fwrite(&info->width, sizeof(info->width), 1, file);
+	fwrite(&info->height, sizeof(info->height), 1, file);
+	fwrite(&info->planes, sizeof(info->planes), 1, file);
+	fwrite(&info->bit_count, sizeof(info->bit_count), 1, file);
+	fwrite(&info->compression, sizeof(info->compression), 1, file);
+	fwrite(&info->picture_size, sizeof(info->picture_size), 1, file);
+	fwrite(&info->x_pels, sizeof(info->x_pels), 1, file);
+	fwrite(&info->y_pels, sizeof(info->y_pels), 1, file);
+	fwrite(&info->clr_used, sizeof(info->clr_used), 1, file);
+	fwrite(&info->clr_important, sizeof(info->clr_important), 1, file);
+}
+
+void write_pixel(FILE *file, pixel *p) {
+	fwrite(&p->b, sizeof(p->b), 1, file);
+	fwrite(&p->g, sizeof(p->g), 1, file);
+	fwrite(&p->r, sizeof(p->r), 1, file);
+}
+
+int get_align(int width) {
+	return (3 * width + 3) / 4 * 4 - width * 3;
+}
+
+void fix_header_and_info(bmp *p, int width, int height) {
+	p->info.width = width;
+	p->info.height = height;
+	p->info.picture_size = (width * sizeof(pixel) + get_align(width)) * height;
+	p->header.size = header_size + info_size + p->info.picture_size;
+}
+
+pixel **alloc_picture(int width, int height) {
+	pixel **result = malloc(height * sizeof(pixel*));
+	for (int i = 0; i < height; i++) {
+		result[i] = malloc(width * sizeof(pixel));
+	}
+	return result;
+}
+
+void free_picture(pixel **picture, int width, int height) {
+	(void)width;
+	for (int i = 0; i < height; i++) {
+		free(picture[i]);
+	}
+	free(picture);
+}
+
+void load_bmp(FILE *file, bmp *p) {
+	read_file_header(file, &p->header);
+	read_info_header(file, &p->info);
+
+	int width = p->info.width, height = p->info.height;
+	p->picture = alloc_picture(width, height);
+
+	for (int i = height - 1; i >= 0; i--) {
+		for (int j = 0; j < width; j++) {
+			read_pixel(file, &p->picture[i][j]);
+//			printf("%d %d %d\n", p->picture[i][j].r, p->picture[i][j].g, p->picture[i][j].b);
+		}
+		for (int j = 0; j < get_align(width); j++) {
+			byte align; fread(&align, 1, 1, file);
+		}
+	}
+}
+
+// Crop $b$ and write result into $a$.
+void crop(bmp *a, bmp *b, int x, int y, int width, int height) {
+	memcpy(&a->header, &b->header, sizeof(file_header));
+	memcpy(&a->info, &b->info, sizeof(info_header));
+	a->picture = alloc_picture(width, height);
+
+	fix_header_and_info(a, width, height);
+
+	for (int i = y; i < y + height; i++) {
+		memcpy(a->picture[i - y], b->picture[i] + x, width * sizeof(pixel));
+	}
+}
+
+// Rotate $b$ and write result into $a$.
+void rotate(bmp *a, bmp *b) {
+	memcpy(&a->header, &b->header, sizeof(file_header));
+	memcpy(&a->info, &b->info, sizeof(info_header));
+	int width = b->info.width, height = b->info.height;
+	a->picture = alloc_picture(height, width);
+
+	fix_header_and_info(a, height, width);
+
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			memcpy(&a->picture[j][height - i - 1], &b->picture[i][j], sizeof(pixel));
+		}
+	}
+}
+
+void save_bmp(FILE *file, bmp *p) {
+	write_file_header(file, &p->header);
+	write_info_header(file, &p->info);
+
+	int width = p->info.width, height = p->info.height;
+
+	for (int i = height - 1; i >= 0; i--) {
+		for (int j = 0; j < width; j++) {
+			write_pixel(file, &p->picture[i][j]);
+		}
+		for (int j = 0; j < get_align(width); j++) {
+			byte align = 0; fwrite(&align, 1, 1, file);
+		}
+	}
+}
+
+void free_bmp(bmp *p) {
+	free_picture(p->picture, p->info.width, p->info.height);
+}
+
+int main(int argc, char **argv) {
+	assert(argc >= 8);
+
+	FILE *in = fopen(argv[2], "rb");
+	bmp orig;
+	load_bmp(in, &orig);
+	fclose(in);
+	
+	bmp cr;
+	int x = atoi(argv[4]), y = atoi(argv[5]), w = atoi(argv[6]), h = atoi(argv[7]);
+	crop(&cr, &orig, x, y, w, h);
+
+	bmp rot;
+	rotate(&rot, &cr);
+
+	FILE *out = fopen(argv[3], "wb");
+	save_bmp(out, &rot);
+	fclose(out);
+
+	free_bmp(&orig);
+	free_bmp(&cr);
+	free_bmp(&rot);
+
+	return 0;
+}

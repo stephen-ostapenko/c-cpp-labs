@@ -1,0 +1,122 @@
+#include "huffman.h"
+#include <algorithm>
+#include <fstream>
+#include <memory>
+#include <exception>
+#include <iostream>
+
+static const size_t BUFFER_SIZE = (1 << 23);
+
+static std::vector <std::string> convert_args(int argc, char **argv) {
+	std::vector <std::string> result;
+	for (int i = 1; i < argc; i++) {
+		result.push_back(std::string(argv[i]));
+	}
+	return result;
+}
+
+static void ex_assert(bool statement, const char *msg) {
+	if (!statement) {
+		throw std::invalid_argument(msg);
+	}
+}
+
+static void validate_args(const std::vector <std::string> &args) {
+	ex_assert(args.size() == 5, "Too few/too many args");
+
+	ex_assert(
+		std::count(args.begin(), args.end(), "-c") + std::count(args.begin(), args.end(), "-u") == 1,
+		"Missing target or too many targets (-c or -u)"
+	);
+	ex_assert(
+		std::count(args.begin(), args.end(), "-f") + std::count(args.begin(), args.end(), "--file") == 1,
+		"Missing input file flag (-f)"
+	);
+	ex_assert(
+		std::count(args.begin(), args.end(), "-o") + std::count(args.begin(), args.end(), "--output") == 1,
+		"Missing output file flag (-o)"
+	);
+}
+
+static bool get_mode(const std::vector <std::string> &args) {
+	for (size_t i = 0; i < args.size(); i++) {
+		if (args[i] == "-c") {
+			return false;
+		}
+		if (args[i] == "-u") {
+			return true;
+		}
+	}
+	ex_assert(0, "Missing target (-c or -u)");
+	return 0;
+}
+
+static std::string get_input_file(const std::vector <std::string> &args) {
+	for (size_t i = 0; i + 1 < args.size(); i++) {
+		if (args[i] == "-f" || args[i] == "--file") {
+			return args[i + 1];
+		}
+	}
+	ex_assert(0, "Missing input file (-f)");
+	return "";
+}
+
+static std::string get_output_file(const std::vector <std::string> &args) {
+	for (size_t i = 0; i + 1 < args.size(); i++) {
+		if (args[i] == "-o" || args[i] == "--output") {
+			return args[i + 1];
+		}
+	}
+	ex_assert(0, "Missing output file (-o)");
+	return "";
+}
+
+static void archive(const std::string &input, const std::string &output) {
+	std::unique_ptr <char[]> input_buf(new char[BUFFER_SIZE]);
+	std::ifstream in(input);
+	ex_assert(!in.fail(), "Input file doesn't exist or can't be opened");
+	in.rdbuf()->pubsetbuf(input_buf.get(), BUFFER_SIZE);
+
+	std::unique_ptr <char[]> output_buf(new char[BUFFER_SIZE]);
+	std::ofstream out(output);
+	ex_assert(!in.fail(), "Output file doesn't exist or can't be opened");
+	out.rdbuf()->pubsetbuf(output_buf.get(), BUFFER_SIZE);
+	
+	huffman::HuffmanArchiver a;
+	a.archive(in, out);
+}
+
+static void dearchive(const std::string &input, const std::string &output) {
+	std::unique_ptr <char[]> input_buf(new char[BUFFER_SIZE]);
+	std::ifstream in(input);
+	ex_assert(!in.fail(), "Input file doesn't exist or can't be opened");
+	in.rdbuf()->pubsetbuf(input_buf.get(), BUFFER_SIZE);
+
+	std::unique_ptr <char[]> output_buf(new char[BUFFER_SIZE]);
+	std::ofstream out(output);
+	ex_assert(!in.fail(), "Output file doesn't exist or can't be opened");
+	out.rdbuf()->pubsetbuf(output_buf.get(), BUFFER_SIZE);
+
+	huffman::HuffmanDearchiver d;
+	d.dearchive(in, out);
+}
+
+int main(int argc, char **argv) {
+	try {
+		std::vector <std::string> args = convert_args(argc, argv);
+		validate_args(args);
+		bool mode = get_mode(args);
+		std::string input = get_input_file(args);
+		std::string output = get_output_file(args);
+
+		if (!mode) {
+			archive(input, output);
+		} else {
+			dearchive(input, output);
+		}
+	} catch (std::exception &e) {
+		std::cerr << e.what() << std::endl;
+	}
+
+	return 0;
+}

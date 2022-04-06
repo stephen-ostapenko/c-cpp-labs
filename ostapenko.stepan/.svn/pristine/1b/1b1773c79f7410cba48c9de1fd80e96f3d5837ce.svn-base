@@ -1,0 +1,54 @@
+#pragma once
+
+#include <cstdint>
+#include <iosfwd>
+#include <ios>
+
+namespace bit_io {
+
+using std::size_t;
+
+class OutOfBitsException : public std::ios_base::failure {
+public:
+	OutOfBitsException(const char *msg): std::ios_base::failure(msg) {}
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class BitInputStream {
+public:
+	BitInputStream(std::ifstream &_in);
+	~BitInputStream();
+
+	bool read_bit();
+
+private:
+	static const size_t BITS_IN_CHAR = 8 * sizeof(char);
+	std::ifstream *in;
+	char buffer, bit_mask;
+	unsigned char buf_pos;
+
+	void update_buffer();
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class BitOutputStream {
+public:
+	BitOutputStream(std::ofstream &_out);
+	~BitOutputStream();
+
+	void write_bit(bool bit);
+
+private:
+	static const size_t BITS_IN_CHAR = 8 * sizeof(char);
+	std::ofstream *out;
+	char buffer, bit_mask;
+	unsigned char buf_pos;
+
+	void release_buffer();
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+}

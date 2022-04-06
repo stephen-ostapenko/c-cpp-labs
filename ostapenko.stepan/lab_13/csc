@@ -1,0 +1,1 @@
+g++ -std=c++03 -pedantic -Wall -Wextra -Werror -Iinclude src/smoke_compile.cpp -o kek

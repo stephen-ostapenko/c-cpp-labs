@@ -1,0 +1,71 @@
+#include "arg_utils.h"
+#include <algorithm>
+#include <stdexcept>
+
+namespace arg_utils {
+
+std::vector <std::string_view> convert_args(int argc, const char **argv) {
+	std::vector <std::string_view> result;
+	for (int i = 1; i < argc; i++) {
+		result.push_back(std::string_view(argv[i]));
+	}
+	return result;
+}
+
+void ex_assert(bool statement, const char *msg) {
+	if (!statement) {
+		throw std::invalid_argument(msg);
+	}
+}
+
+void validate_args(const std::vector <std::string_view> &args) {
+	ex_assert(args.size() == 5, "Too few/too many args");
+
+	ex_assert(
+		std::count(args.begin(), args.end(), "-c") + std::count(args.begin(), args.end(), "-u") == 1,
+		"Missing target or too many targets (-c or -u)"
+	);
+	ex_assert(
+		std::count(args.begin(), args.end(), "-f") + std::count(args.begin(), args.end(), "--file") == 1,
+		"Missing input file flag or too many input file flags (-f)"
+	);
+	ex_assert(
+		std::count(args.begin(), args.end(), "-o") + std::count(args.begin(), args.end(), "--output") == 1,
+		"Missing output file flag or too many output file flags (-o)"
+	);
+}
+
+bool get_mode(const std::vector <std::string_view> &args) {
+	for (size_t i = 0; i < args.size(); i++) {
+		if (args[i] == "-c") {
+			return false;
+		}
+		if (args[i] == "-u") {
+			return true;
+		}
+	}
+	ex_assert(0, "Missing target (-c or -u)");
+	return 0;
+}
+
+std::string_view get_input_file(const std::vector <std::string_view> &args) {
+	for (size_t i = 0; i + 1 < args.size(); i++) {
+		if (args[i] == "-f" || args[i] == "--file") {
+			return args[i + 1];
+		}
+	}
+	ex_assert(0, "Missing input file (-f)");
+	return "";
+}
+
+std::string_view get_output_file(const std::vector <std::string_view> &args) {
+	for (size_t i = 0; i + 1 < args.size(); i++) {
+		if (args[i] == "-o" || args[i] == "--output") {
+			return args[i + 1];
+		}
+	}
+	ex_assert(0, "Missing output file (-o)");
+	return "";
+}
+
+}

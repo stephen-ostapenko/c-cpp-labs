@@ -1,0 +1,179 @@
+#include "my_vector.h"
+
+#include <iostream>
+#include <cassert>
+
+namespace product {
+
+class Product {
+public:
+	explicit Product(const char* name, int quantity, double price): _name(new char[strlen(name) + 1]), _quantity(quantity), _price(price) {
+		std::strcpy(_name, name);
+	}
+
+	Product(const Product &p) {
+		_name = new char[strlen(p._name) + 1];
+		std::strcpy(_name, p._name);
+		_quantity = p._quantity;
+		_price = p._price;
+	}
+
+	~Product() {
+		delete[] _name;
+	}
+
+	Product& operator=(Product p) {
+		std::swap(_name, p._name);
+		std::swap(_quantity, p._quantity);
+		std::swap(_price, p._price);
+		return *this;
+	}
+
+	bool operator==(const Product &p) const {
+		return !std::strcmp(_name, p._name) && _quantity == p._quantity && _price == p._price;
+	}
+
+	void print(std::ostream &out) const {
+		out << _name << " " << _quantity << " " << _price;
+	}
+
+private:
+	char *_name;
+	int _quantity;
+	double _price;
+};
+
+}
+
+std::ostream& operator<<(std::ostream &out, const product::Product &p) {
+	p.print(out);
+	return out;
+}
+
+template <typename T>
+void test_my_vector(T a, T b) {
+	containers::my_vector<T> arr;
+
+	assert(arr.empty());
+
+	arr.push_back(a);
+
+	assert(arr.size() == 1);
+
+	arr.push_back(b);
+
+	assert(arr.size() == 2);
+	assert(arr.capacity() == 2);
+
+	arr.clear();
+
+	assert(arr.size() == 0);
+	assert(arr.capacity() == 2);
+
+	arr.push_back(a);
+	arr.push_back(b);
+	arr.pop_back();
+
+	assert(arr.size() == 1);
+	assert(arr[0] == a);
+
+	arr.push_back(a);
+	arr.push_back(b);
+
+	assert(arr.size() == 3);
+	assert(arr.capacity() == 4);
+	assert(arr[1] == a);
+	assert(arr[2] == b);
+
+	arr.push_back(b);
+	containers::my_vector<T> brr(arr);
+
+	assert(brr.size() == 4);
+	assert(brr.capacity() == 4);
+	assert(brr[0] == a);
+	assert(brr[1] == a);
+	assert(brr[2] == b);
+	assert(brr[3] == b);
+
+	brr[0] = b;
+	brr[1] = a;
+
+	assert(brr[0] == b);
+	assert(brr[1] == a);
+
+	brr.clear();
+	arr.push_back(a);
+
+	assert(brr.size() == 0);
+	assert(brr.empty());
+	assert(brr.capacity() == 4);
+	assert(arr.size() == 5);
+	assert(arr.capacity() == 8);
+
+	arr.reserve(24);
+	brr.reserve(100);
+
+	assert(arr.capacity() == 32);
+	assert(brr.capacity() == 128);
+	assert(brr.empty());
+
+	brr = arr;
+
+	assert(brr.size() == 5);
+	assert(brr.capacity() == 32);
+	assert(brr[0] == arr[0]);
+	assert(brr[1] == arr[1]);
+	assert(brr[2] == arr[2]);
+	assert(brr[3] == arr[3]);
+	assert(brr[4] == arr[4]);
+
+	arr.clear();
+
+	assert(brr.size() == 5);
+	assert(brr.capacity() == 32);
+	assert(brr[0] == a);
+	assert(brr[1] == a);
+	assert(brr[2] == b);
+
+	std::cerr << "testing done" << std::endl;
+}
+
+template <typename T>
+void test_my_vector_default_constructible(T a, T b) {
+	containers::my_vector<T> arr(10);
+	arr[0] = a;
+	arr[1] = b;
+	arr[2] = a;
+	arr[3] = b;
+
+	assert(arr.size() == 10);
+	assert(arr.capacity() == 16);
+
+	arr.push_back(a);
+	arr.push_back(b);
+
+	assert(arr.size() == 12);
+	assert(arr.capacity() == 16);
+
+	arr.resize(3);
+
+	assert(arr.size() == 3);
+	assert(arr.capacity() == 16);
+
+	arr.resize(24);
+
+	assert(arr.size() == 24);
+	assert(arr.capacity() == 32);
+
+	std::cerr << "testing done" << std::endl;
+}
+
+int main() {
+	test_my_vector<int>(5, 10);
+
+	test_my_vector<product::Product>(product::Product("asdf", 4, 12.0), product::Product("qwe", -1, 7.5));
+
+	test_my_vector_default_constructible<int>(5, 10);
+
+	return 0;
+}

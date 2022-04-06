@@ -1,0 +1,78 @@
+#include <stdlib.h>
+#include <memory.h>
+#include <assert.h>
+#include "mergesort.h"
+
+int partition(void *array, size_t element_size, size_t part1_size, void **part1, size_t part2_size, void **part2) {
+	*part1 = malloc(part1_size * element_size);
+	*part2 = malloc(part2_size * element_size);
+
+	if (*part1 == NULL || *part2 == NULL) {
+		if (*part1) {
+			free(*part1);
+		}
+		if (*part2) {
+			free(*part2);
+		}
+		return -1;
+	}
+
+	memcpy(*part1, array, part1_size * element_size);
+	memcpy(*part2, array + part1_size * element_size, part2_size * element_size);
+
+	return 0;
+}
+
+void merge(void *array, size_t element_size, size_t part1_size, void *part1, size_t part2_size, void *part2, int (*comparator)(const void*, const void*)) {
+	while (part1_size > 0 && part2_size > 0) {
+		if (comparator(part1, part2) <= 0) {
+			memcpy(array, part1, element_size);
+			array += element_size; part1 += element_size;
+			part1_size--;
+		} else {
+			memcpy(array, part2, element_size);
+			array += element_size; part2 += element_size;
+			part2_size--;
+		}
+	}
+
+	while (part1_size > 0) {
+		memcpy(array, part1, element_size);
+		array += element_size; part1 += element_size;
+		part1_size--;
+	}
+
+	while (part2_size > 0) {
+		memcpy(array, part2, element_size);
+		array += element_size; part2 += element_size;
+		part2_size--;
+	}
+}
+
+int mergesort(void *array, size_t elements, size_t element_size, int (*comparator)(const void*, const void*)) {
+	if (elements <= 1) {
+		return 0;
+	}
+
+	size_t part1_size = elements / 2;
+	size_t part2_size = elements - part1_size;
+	void *part1, *part2;
+
+	if (partition(array, element_size, part1_size, &part1, part2_size, &part2)) {
+		return -1;
+	}
+
+	if (mergesort(part1, part1_size, element_size, comparator)) {
+		free(part1); free(part2);
+		return -1;
+	}
+	if (mergesort(part2, part2_size, element_size, comparator)) {
+		free(part1); free(part2);
+		return -1;
+	}
+
+	merge(array, element_size, part1_size, part1, part2_size, part2, comparator);
+
+	free(part1); free(part2);
+	return 0;
+}

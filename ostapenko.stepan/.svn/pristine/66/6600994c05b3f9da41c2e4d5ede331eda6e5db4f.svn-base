@@ -1,0 +1,71 @@
+#include "huffman.h"
+#include "arg_utils.h"
+#include <iostream>
+#include <fstream>
+#include <memory>
+
+using arg_utils::convert_args;
+using arg_utils::ex_assert;
+using arg_utils::validate_args;
+using arg_utils::get_mode;
+using arg_utils::get_input_file;
+using arg_utils::get_output_file;
+
+static const size_t BUFFER_SIZE = (1 << 23);
+
+static huffman::HuffFileData archive(const std::string_view &input, const std::string_view &output) {
+	std::unique_ptr <char[]> input_buf(new char[BUFFER_SIZE]);
+	std::ifstream in(input.data());
+	ex_assert(!in.fail(), "Input file doesn't exist or can't be opened");
+	in.rdbuf()->pubsetbuf(input_buf.get(), BUFFER_SIZE);
+
+	std::unique_ptr <char[]> output_buf(new char[BUFFER_SIZE]);
+	std::ofstream out(output.data());
+	ex_assert(!in.fail(), "Output file doesn't exist or can't be opened");
+	out.rdbuf()->pubsetbuf(output_buf.get(), BUFFER_SIZE);
+	
+	huffman::HuffmanArchiver a;
+	return a.archive(in, out);
+}
+
+static huffman::HuffFileData dearchive(const std::string_view &input, const std::string_view &output) {
+	std::unique_ptr <char[]> input_buf(new char[BUFFER_SIZE]);
+	std::ifstream in(input.data());
+	ex_assert(!in.fail(), "Input file doesn't exist or can't be opened");
+	in.rdbuf()->pubsetbuf(input_buf.get(), BUFFER_SIZE);
+
+	std::unique_ptr <char[]> output_buf(new char[BUFFER_SIZE]);
+	std::ofstream out(output.data());
+	ex_assert(!in.fail(), "Output file doesn't exist or can't be opened");
+	out.rdbuf()->pubsetbuf(output_buf.get(), BUFFER_SIZE);
+
+	huffman::HuffmanDearchiver d;
+	return d.dearchive(in, out);
+}
+
+int main(int argc, const char **argv) {
+	try {
+		std::vector <std::string_view> args = convert_args(argc, argv);
+		validate_args(args);
+		bool mode = get_mode(args);
+		std::string_view input = get_input_file(args);
+		std::string_view output = get_output_file(args);
+
+		huffman::HuffFileData data;
+		if (!mode) {
+			data = archive(input, output);
+		} else {
+			data = dearchive(input, output);
+		}
+
+		std::cout << data.input_sz << std::endl;
+		std::cout << data.output_sz << std::endl;
+		std::cout << data.additional_sz << std::endl;
+
+	} catch (std::exception &e) {
+		std::cerr << e.what() << std::endl;
+		return 1;
+	}
+
+	return 0;
+}

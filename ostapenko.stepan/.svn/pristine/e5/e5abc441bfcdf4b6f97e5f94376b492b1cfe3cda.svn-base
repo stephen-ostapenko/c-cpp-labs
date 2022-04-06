@@ -1,0 +1,54 @@
+#ifndef _BMP_H_
+#define _BMP_H_
+
+typedef unsigned char byte;
+typedef unsigned short word;
+typedef unsigned int dword;
+
+typedef struct file_header_s {
+	word type;
+	dword size;
+	word res1;
+	word res2;
+	dword offset;
+} file_header;
+
+typedef struct info_header_s {
+	dword info_size;
+	int width;
+	int height;
+	word planes;
+	word bit_count;
+	dword compression;
+	dword picture_size;
+	int x_pels;
+	int y_pels;
+	dword clr_used;
+	dword clr_important;
+} info_header;
+
+typedef struct pixel_s {
+	byte r, g, b;
+} pixel;
+
+typedef struct bmp_s {
+	file_header header;
+	info_header info;
+	pixel **picture;
+} bmp;
+
+pixel **alloc_picture(int width, int height);
+
+void load_bmp(FILE *file, bmp *p);
+
+// Crop $b$ and write result into $a$.
+void crop(bmp *a, bmp *b, int x, int y, int width, int height);
+
+// Rotate $b$ and write result into $a$.
+void rotate(bmp *a, bmp *b);
+
+void save_bmp(FILE *file, bmp *p);
+
+void free_bmp(bmp *p);
+
+#endif

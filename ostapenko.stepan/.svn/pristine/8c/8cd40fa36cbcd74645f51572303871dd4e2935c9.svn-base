@@ -1,0 +1,154 @@
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include "clist.h"
+#include "point_list.h"
+
+typedef unsigned char byte;
+
+const size_t BYTES_COUNT = 3;
+
+int get_int_from_bytes(byte *bytes, size_t bytes_count) {
+	int result = 0, sign = 0;
+
+	if (bytes[bytes_count - 1] >> 7) {
+		sign = 1;
+		bytes[bytes_count - 1] ^= (1 << 7);
+	}
+
+	for (size_t i = 0; i < bytes_count; i++) {
+		result <<= 8;
+		result |= bytes[bytes_count - i - 1];
+	}
+
+	if (sign) {
+		result -= (1 << (bytes_count * 8 - 1));
+	}
+
+	return result;
+}
+
+void get_bytes_from_int(int number, byte *bytes, size_t bytes_count) {
+	int sign = 0;
+
+	if (number < 0) {
+		sign = 1;
+		number += (1 << (bytes_count * 8 - 1));
+	}
+
+	for (size_t i = 0; i < bytes_count; i++) {
+		bytes[i] = number & ((1 << 8) - 1);
+		number >>= 8;
+	}
+
+	if (sign) {
+		bytes[bytes_count - 1] ^= (1 << 7);
+	}
+
+}
+
+void read_points_from_text_file(FILE *file, struct intrusive_list *list) {
+	int x, y;
+		
+	while (!feof(file) && fscanf(file, "%d %d", &x, &y) == 2) {
+		add_point(list, x, y);
+	}
+}
+
+void read_points_from_bin_file(FILE *file, struct intrusive_list *list) {
+	while (!feof(file)) {
+		byte buffer[BYTES_COUNT];
+
+		if (!fread(buffer, 1, BYTES_COUNT, file)) {
+			break;
+		}
+		int x = get_int_from_bytes(buffer, BYTES_COUNT);
+		if (!fread(buffer, 1, BYTES_COUNT, file)) {
+			break;
+		}
+		int y = get_int_from_bytes(buffer, BYTES_COUNT);
+
+		add_point(list, x, y);
+	}
+}
+
+void print_points_to_text_file(FILE *file, struct intrusive_list *list) {
+	struct intrusive_node *list_iter = list->head;
+
+	while (list_iter) {
+		struct point *current_point = container_of(list_iter, struct point, node);
+
+		fprintf(file, "%d %d\n", current_point->x, current_point->y);
+
+		list_iter = list_iter->next;
+	}
+}
+
+void print_points_to_bin_file(FILE *file, struct intrusive_list *list) {
+	struct intrusive_node *list_iter = list->head;
+
+	while (list_iter) {
+		struct point *current_point = container_of(list_iter, struct point, node);
+		byte buffer[BYTES_COUNT];
+
+		get_bytes_from_int(current_point->x, buffer, BYTES_COUNT);
+		fwrite(buffer, 1, BYTES_COUNT, file);
+		get_bytes_from_int(current_point->y, buffer, BYTES_COUNT);
+		fwrite(buffer, 1, BYTES_COUNT, file);
+
+		list_iter = list_iter->next;
+	}
+}
+
+int main(int argc, char **argv) {
+	assert(argc >= 4);
+
+	struct intrusive_list list;
+	init_list(&list);
+	FILE *fin = fopen(argv[2], "r");
+
+	if (fin == NULL) {
+		printf("Input file not found!!!\n");
+		return 0;
+	}
+
+	if (!strcmp(argv[1], "loadtext")) {
+		read_points_from_text_file(fin, &list);
+	} else {
+		read_points_from_bin_file(fin, &list);
+	}
+
+	fclose(fin);
+
+	if (!strcmp(argv[3], "savetext")) {
+		assert(argc >= 5);
+
+		FILE *fout = fopen(argv[4], "w");
+		print_points_to_text_file(fout, &list);
+		fclose(fout);
+	}
+
+	if (!strcmp(argv[3], "savebin")) {
+		assert(argc >= 5);
+
+		FILE *fout = fopen(argv[4], "w");
+		print_points_to_bin_file(fout, &list);
+		fclose(fout);
+	}
+
+	if (!strcmp(argv[3], "print")) {
+		assert(argc >= 5);
+
+		apply(&list, print, argv[4]);
+	}
+
+	if (!strcmp(argv[3], "count")) {
+		size_t result = 0;
+		apply(&list, count, &result);
+		printf("%d\n", (int)result);
+	}
+
+	remove_all_points(&list);
+
+	return 0;
+}

@@ -1,0 +1,31 @@
+#pragma once
+
+#include "hufftree.h"
+#include "huffman_util.h"
+#include "bitio.h"
+#include <iosfwd>
+
+namespace huffman {
+
+using std::size_t;
+using huff_tree::CharCounter;
+using huff_tree::HuffTree;
+using bit_io::BitOutputStream;
+
+class HuffmanArchiver {
+public:
+	HuffFileData archive(std::ifstream &in, std::ofstream &out);
+
+private:
+	static const size_t BUFFER_SIZE = 1;
+	static const size_t BITS_IN_CHAR = 8 * sizeof(unsigned char);
+	HuffTree htree;
+
+	void count_chars(std::ifstream &in, CharCounter &cnt) const;
+	size_t save_tree(BitOutputStream &bo) const;
+	size_t compress_file(std::ifstream &in, BitOutputStream &bo) const;
+	size_t calc_file_size(const CharCounter &cnt) const;
+	void write_file_size(const CharCounter &cnt, BitOutputStream &bo) const;
+};
+
+}

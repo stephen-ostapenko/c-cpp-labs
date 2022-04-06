@@ -1,0 +1,20 @@
+#!/bin/bash
+
+cd ../
+mkdir b
+cd b
+echo
+
+cmake ..
+echo
+make
+echo
+
+./test_hw_02
+echo
+
+cd ../test/itest
+
+./vitest.sh
+./itest.sh
+
